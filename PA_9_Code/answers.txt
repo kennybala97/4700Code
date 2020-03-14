@@ -1,0 +1,65 @@
+Question 3
+---------------------------------------------------------------------------
+
+B
+----------
+This seems to be plotting mode 00 since "nmodes" is set to one. For this
+mode it's getting it for both the TE and TM case. In other words, when
+the E-field is transverse to the direction of propagation, and when the
+H-field is transverse instead. I'm guessing in "wgmodes.m" you configure
+your setup using the boundary condition parameter "000A" and "000S". This
+way you can set the boundary conditions to get TM or TE depending on what
+you want.
+
+C
+----------
+Run "basic_fullvector_part3c.m" to get the plots
+
+D
+----------
+I implemented this using "contourmode_part3d.m", which you can replace
+directly with "contourmode.m". Well, it worked for me, I hope it works
+for anyone else who tries to run it too.
+
+Surf seems more useful than contour. It shows the gradient much
+more smoothly. At the same time, seeing the ridge waveguide boundaries
+is not as easy, so that is somewhat of a downside.
+
+Question 4
+---------------------------------------------------------------------------
+
+A
+----------
+The code is in "basic_fullvector_part4.m"
+
+B
+----------
+After looking at the figures, you can tell the wave is "leaking out of
+the ridge and into what I assume is the substrate. Basically as you decrease
+the ridge half-width the structure becomes a much worse waveguide as most
+of the energy is not in the ridge itself. It seems to be this is because of
+either two things. First, the most likely explanation to me is that as the
+ridge full-width approaches lambda/2, the structure alone cannot support
+the fundamental mode. Thus, the wave begins leaking out. Otherwise though,
+it might also be because the mesh is simply not fine enough to support a
+good simulation at the lower ridge half-width lengths.
+
+N_eff also goes down. I assume this is once again because there is less
+"ridge" in the simulation, and more "air". Thus the reduction in lambda
+from the ridge is lower, and N_eff goes down.
+
+C
+----------
+After changing dx and dy in "basic_fullvector_part4c.m", i didnt really
+notice any difference. I made both of them 8x bigger, and that did change Hx,
+but for some reason it did not change Hy
+
+
+Question 5
+---------------------------------------------------------------------------
+The basic condition for an optical fiber is that n_core > n_clad. Since
+the core index is super low at the start, pretty much the whole wave leaks
+out and refracts instead of reflecting at the interface between core and
+cladding. As the index of the ridge increases, this goes away and you get
+most of the wave's energy inside the waveguide once the index goes back up
+to 3.44
