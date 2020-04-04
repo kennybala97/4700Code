@@ -1,5 +1,5 @@
 
-function [Vmap,E_x,E_y,J_x,J_y] = laplace_solver_2d_part_2(nx,ny,delta,c_map)
+function [Vmap,E_x,E_y,J_x,J_y] = laplace_solver_2d_part_2(nx,ny,delta,c_map,V0)
     G = sparse(nx*ny);
     B = zeros(1,nx*ny);
     
@@ -10,7 +10,7 @@ function [Vmap,E_x,E_y,J_x,J_y] = laplace_solver_2d_part_2(nx,ny,delta,c_map)
         i = co_ords.i(u);
         j = co_ords.j(u);
 
-        [G,B] = set_values(nx,ny,i,j,c_map,G,B);
+        [G,B] = set_values(nx,ny,i,j,c_map,G,B,V0);
     end
 
     V = G\B';
@@ -26,7 +26,7 @@ function [Vmap,E_x,E_y,J_x,J_y] = laplace_solver_2d_part_2(nx,ny,delta,c_map)
     
 end
 
-function [G,B] = set_values(nx,ny,i,j,c_map,G,B)
+function [G,B] = set_values(nx,ny,i,j,c_map,G,B,V0)
     l = ij_to_n(ny,i-1,j);
     r = ij_to_n(ny,i+1,j);
     t = ij_to_n(ny,i,j+1);
@@ -35,7 +35,7 @@ function [G,B] = set_values(nx,ny,i,j,c_map,G,B)
     
     if i == 1
         G(c,:) = 0;
-        G(c,c) = 1;
+        G(c,c) = 1/V0;
         B(c) = 1;
     elseif i == nx
         G(c,:) = 0;

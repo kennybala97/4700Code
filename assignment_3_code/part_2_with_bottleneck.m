@@ -1,66 +1,66 @@
-function [] = part_2_no_bottleneck()
+function [bottlenecks,I_av] = part_2_with_bottleneck()
     clear all;
     close all;
     clc;
     
-    [final_x, final_y, ~, ~] = simulate(0.1, 0, 10);
+%     [final_x, final_y, ~, ~] = simulate(10000,1);
     
 %     plot_positions()
-%     plot_current()
+    [bottlenecks,I_av] = plot_current();
+    
 end
 
 function [] = plot_positions()
 
     figure;
-    [final_x, final_y, ~, ~] = simulate(0.1, 0, 5);
+    [final_x, final_y, ~, ~] = simulate(1000,100);
     
-    for i=1:1:5
+    for i=1:10:1000
        scatter(final_x(i,:)*1e9,final_y(i,:)*1e9,'.');hold on;
     end
-    title('Position Over Time for Five Different Particles, $V_o=0.1V$', 'interpreter', 'latex');
+    title('Part 2 : Position Over Time for Different Particles, $V_o=100V$', 'interpreter', 'latex');
     xlabel('X(nm)', 'interpreter', 'latex');
     ylabel('Y(nm)', 'interpreter', 'latex');
     grid on;
 
 end
 
-function [] = plot_current()
+function [bottlenecks,I_av] = plot_current()
     figure;
 
-    marks = ["r.","b.","g."];
-    voltages = 0:0.2:0.4;
+    bottlenecks = 0.1:0.1:10;
     
-    for i = 1:3
+    for i = 1:length(bottlenecks)
         
-        [~, ~, I, d_t] = simulate(voltages(i), 0, 500);
-        
-        scatter((1:1:1000)*d_t*1e9,I,marks(i));
-        hold on;
+        [~, ~, I, d_t] = simulate(1000, bottlenecks(i));
+        I_av(i) = mean(I);
     end
     
-    title('Average Drift Current $v_{dx}$ for Different Voltages', 'interpreter', 'latex');
-    xlabel('Time(ns)', 'interpreter', 'latex');
-    ylabel('Current(A)', 'interpreter', 'latex');
-    legend("$V_o = 0V$","$V_o = 0.2V$","$V_o = 0.4V$","interpreter", "latex");
+    scatter(bottlenecks,I_av,'.');
+    
+    title('Average Drift Current $I_{d}$ for Different Bottlenecks', 'interpreter', 'latex');
+    xlabel('Bottleneck Width(nm)', 'interpreter', 'latex');
+    ylabel('Current(mA)', 'interpreter', 'latex');
     grid on;
 
 end
 
-function [final_x, final_y, I, d_t] = simulate(V_INIT, V_DIR, N)
+function [final_x, final_y, I, d_t] = simulate(N, V0)
 
-    addpath(".\laplace_solver");
+    addpath("./laplace_solver");
     
-    conc = 10^15;
+    conc = (10^15)*(100^2);
 
     T = 300;
     L = 200e-9;
     W = 100e-9;
 
-    tau_mn = 0.2e-9;
+    tau_mn = 0.2e-12;
 
     box.L = 40e-9;
-    box.gap = 40e-9;
-
+    box.gap = 20e-9;
+%     box.gap = bottleneck;
+    
     nx = 100;
     ny = 50;
     
@@ -68,14 +68,15 @@ function [final_x, final_y, I, d_t] = simulate(V_INIT, V_DIR, N)
     
     electron_properties = electron_properties_with_mb_velocity_pillbox(T,L,W,N,box);
     
-    [~, E_x, E_y, J_x, J_y, ~, ~] = part_2_solver(nx,ny,delta,0.01,1,40,20);
-    [X, Y] = ndgrid((0:1:(nx - 1))*delta, (0:1:(ny - 1))*delta);
+    [V, E_x, E_y, J_x, J_y, ~, ~] = part_2_solver(nx,ny,delta,0.01,1,box.L*1e9,box.gap*1e9,V0);
     
+    [X, Y] = ndgrid((0:1:(nx - 1))*delta, (0:1:(ny - 1))*delta);
+        
     electron_properties = calculate_a_e_field(electron_properties, X, Y, E_x, E_y);
 
     d_t = (W/1000)/electron_properties.v_th;
     n = 1;
-    n_final = 1000;
+    n_final = 200;
     p_scat = 1-exp(-d_t/tau_mn);
 
     % f = figure;
@@ -85,6 +86,10 @@ function [final_x, final_y, I, d_t] = simulate(V_INIT, V_DIR, N)
     final_x = zeros(N,n_final);
     final_y = zeros(N,n_final);
 
+%     f = figure;
+    
+    [xq,yq] = meshgrid(0:1e-9:L, 0:1e-9:W);
+    
     while n < n_final
         electron_properties = calculate_a_e_field(electron_properties, X, Y, E_x, E_y);
 
@@ -96,12 +101,44 @@ function [final_x, final_y, I, d_t] = simulate(V_INIT, V_DIR, N)
         [v_x_new, v_y_new, v_mag_new] = compute_maxwell_boltzmann_velocities(electron_properties);
 
         v_dx_av(n) = mean(electron_properties.v_x);
-
-        scatter(electron_properties.x, electron_properties.y,10,'.k');hold on;
+%     
+%         subplot(211);
+%         scatter(electron_properties.x, electron_properties.y,10,'.k');hold on;
+%         
+%         quiver(electron_properties.x, electron_properties.y, electron_properties.v_x, electron_properties.v_y,0.1,'r');
+%         hold off;
+% 
+%         xlim([0 L]);
+%         ylim([0 W]); 
+%         title('Position and Velocity for Part 3 Simulation, $V_o=1V$', 'interpreter', 'latex');
+%         xlabel('X(m)', 'interpreter', 'latex');
+%         ylabel('Y(m)', 'interpreter', 'latex');
+%         
+%         subplot(212);
+% 
+%         heatmap = griddata(electron_properties.x, electron_properties.y, electron_properties.temperature,xq,yq);
+%         
+%         heatmap(xq > (L - box.L)/2 & xq < (L + box.L)/2 & yq > (W + box.gap)/2) = 0;
+%         heatmap(xq > (L - box.L)/2 & xq < (L + box.L)/2 & yq < (W - box.gap)/2) = 0;
+%         
+%         pcolor(xq, yq, heatmap);
+%         title('Temperature Map(K) For Part 3 Simulation, $V_o=1V$', 'interpreter', 'latex');
+%         xlabel('X(m)', 'interpreter', 'latex');
+%         ylabel('Y(m)', 'interpreter', 'latex');
+%         
+%         view(2)
+% 
+%         colormap jet;
+% 
+%         colorbar;
+%         caxis([0,1000]);
+% 
+%         pause(0.01);
+%         drawnow
+%         frame = getframe(f);
+% 
+%         im{n} = frame2im(frame);
         
-        xlim([0 L]);
-        ylim([0 W]); 
-    
         electron_properties.v_x(scattering_electron_indices) = v_x_new(scattering_electron_indices);
         electron_properties.v_y(scattering_electron_indices) = v_y_new(scattering_electron_indices);
         electron_properties.v_mag(scattering_electron_indices) = v_mag_new(scattering_electron_indices);
@@ -109,13 +146,27 @@ function [final_x, final_y, I, d_t] = simulate(V_INIT, V_DIR, N)
         final_x(:,n) = electron_properties.x;
         final_y(:,n) = electron_properties.y;
         
-        pause(0.01);
+%         pause(0.01);
         
         n = n+1;
     end
     
-    I = abs(electron_properties.q)*conc*v_dx_av;
+    I = abs(electron_properties.q)*conc*v_dx_av*W;        
+        
+%     filename = 'part_2_1V.gif'; % Specify the output file name
+% 
+%     n_images = length(im);
+% 
+%     for idx = 1:n_images
+%         [A,map] = rgb2ind(im{idx},256);
+%         if idx == 1
+%             imwrite(A,map,filename,'gif','LoopCount',Inf,'DelayTime',0.01);
+%         else
+%             imwrite(A,map,filename,'gif','WriteMode','append','DelayTime',0.01);
+%         end
+%     end
 end
+
 
 function [electron_properties] = calculate_a_e_field(electron_properties, X, Y, E_x, E_y)
 
